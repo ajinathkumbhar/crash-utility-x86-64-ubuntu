@@ -1,0 +1,83 @@
+diff --git a/LINUX/android/system/core/init/property_service.cpp b/LINUX/android/system/core/init/property_service.cpp
+index 0a89ae4..ccfea5a 100644
+--- a/LINUX/android/system/core/init/property_service.cpp
++++ b/LINUX/android/system/core/init/property_service.cpp
+@@ -41,6 +41,7 @@
+ #include <sys/types.h>
+ #include <netinet/in.h>
+ #include <sys/mman.h>
++#include <sys/resource.h>
+ #include <private/android_filesystem_config.h>
+ 
+ #include <selinux/selinux.h>
+@@ -469,6 +470,22 @@ static void load_override_properties() {
+     }
+ }
+ 
++static int check_rlim_action() {
++    struct rlimit rl;
++
++    std::string pval = property_get("persist.debug.trace");
++
++    if(pval == "1") {
++        rl.rlim_cur = RLIM_INFINITY;
++        rl.rlim_max = RLIM_INFINITY;
++        if (setrlimit(RLIMIT_CORE, &rl) < 0) {
++            ERROR("could not enable core file generation");
++        }
++    }
++    return 0;
++}
++
++
+ /* When booting an encrypted system, /data is not mounted when the
+  * property service is started, so any properties stored there are
+  * not loaded.  Vold triggers init to load these properties once it
+@@ -478,6 +495,8 @@ void load_persist_props(void) {
+     load_override_properties();
+     /* Read persistent properties after all default values have been loaded. */
+     load_persistent_properties();
++    /*check for coredump*/
++    check_rlim_action();
+ }
+ 
+ void load_recovery_id_prop() {
+diff --git a/LINUX/android/system/core/libcutils/debugger.c b/LINUX/android/system/core/libcutils/debugger.c
+index 4f82b39..3407ec3 100644
+--- a/LINUX/android/system/core/libcutils/debugger.c
++++ b/LINUX/android/system/core/libcutils/debugger.c
+@@ -76,9 +76,7 @@ static int make_dump_request(debugger_action_t action, pid_t tid, int timeout_se
+ }
+ 
+ int dump_backtrace_to_file(pid_t tid, int fd) {
+-  // Kind of a hack;
+-  // Use a timeout of 5 seconds for a given native proc
+-  return dump_backtrace_to_file_timeout(tid, fd, 5);
++  return dump_backtrace_to_file_timeout(tid, fd, 0);
+ }
+ 
+ int dump_backtrace_to_file_timeout(pid_t tid, int fd, int timeout_secs) {
+@@ -91,23 +89,13 @@ int dump_backtrace_to_file_timeout(pid_t tid, int fd, int timeout_secs) {
+   int result = 0;
+   char buffer[1024];
+   ssize_t n;
+-  int flag = 0;
+-
+   while ((n = TEMP_FAILURE_RETRY(read(sock_fd, buffer, sizeof(buffer)))) > 0) {
+-    flag = 1;
+     if (TEMP_FAILURE_RETRY(write(fd, buffer, n)) != n) {
+       result = -1;
+       break;
+     }
+   }
+   close(sock_fd);
+-
+-  if (flag == 0) {
+-    ALOGE("Not even a single byte was read from debuggerd, for pid: %d", tid);
+-  }
+-  if (result == -1) {
+-    ALOGE("Failure(probably timeout) while reading data from debuggerd, for pid: %d", tid);
+-  }
+   return result;
+ }
+ 

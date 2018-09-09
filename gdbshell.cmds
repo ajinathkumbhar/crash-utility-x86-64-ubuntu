@@ -1,0 +1,3 @@
+set solib-absolute-prefix ../distout/out/target/product/rimo02a/symbols
+set solib-search-path ../distout/out/target/product/rimo02a/symbols/system/lib:../distout/out/target/product/rimo02a/symbols/system/lib/hw:../distout/out/target/product/rimo02a/symbols/system/lib/ssl/engines:../distout/out/target/product/rimo02a/symbols/system/lib/drm:../distout/out/target/product/rimo02a/symbols/system/lib/egl:../distout/out/target/product/rimo02a/symbols/system/lib/soundfx:../distout/out/target/product/rimo02a/symbols/vendor/lib:../distout/out/target/product/rimo02a/symbols/vendor/lib/hw:../distout/out/target/product/rimo02a/symbols/vendor/lib/egl
+
